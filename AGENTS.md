@@ -60,6 +60,11 @@ For every task that changes files:
 - Commit after each coherent, verified checkpoint and before risky work.
 - Keep pushing and PR creation separate; publish only when requested or when a
   repository instruction explicitly authorizes it.
+- Open pull requests as normal, ready-for-review PRs. Never open a draft PR
+  unless the human explicitly requests a draft for that specific PR.
+- Request GitHub Copilot review immediately after opening or updating a PR for
+  review. After addressing actionable feedback, re-request review and require a
+  clean review matched to the final PR HEAD.
 - Never force-push without approval.
 - Never merge to `main`; only the human performs that merge.
 - Before finishing, report the branch, commit hashes, verification, published
