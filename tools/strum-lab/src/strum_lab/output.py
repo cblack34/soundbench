@@ -47,7 +47,9 @@ def _svg_bytes(report: Report, audio: AudioData) -> bytes:
     plot_height = height - top - bottom
     center = top + plot_height / 2
     bucket_count = min(plot_width, audio.samples.size)
-    edges = np.linspace(0, audio.samples.size, bucket_count + 1, dtype=np.int64)
+    edges = (
+        np.arange(bucket_count + 1, dtype=np.int64) * audio.samples.size // bucket_count
+    )
     envelope = np.array(
         [
             float(np.max(np.abs(audio.samples[edges[i] : edges[i + 1]])))

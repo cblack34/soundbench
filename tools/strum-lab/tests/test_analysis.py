@@ -81,5 +81,18 @@ def test_manifest_cannot_extend_past_audio(tmp_path: Path) -> None:
     import yaml
 
     manifest_path.write_text(yaml.safe_dump(manifest_data), encoding="utf-8")
-    with pytest.raises(ValueError, match="manifest requires audio"):
+    with pytest.raises(ValueError, match="complete final measurement"):
         analyze(report.audio.path, audio, load_manifest(manifest_path))
+
+
+def test_manifest_requires_complete_final_attack_window(tmp_path: Path) -> None:
+    audio_path = tmp_path / "short.wav"
+    manifest_path = tmp_path / "manifest.yaml"
+    samples, _ = synthetic_strums()
+    write_pcm24(audio_path, samples[: int(11.3 * 16_000)])
+    manifest_path.write_text(manifest_text(), encoding="utf-8")
+    manifest = load_manifest(manifest_path)
+    audio = read_pcm_wav(audio_path, manifest.audio.channel)
+
+    with pytest.raises(ValueError, match="complete final measurement"):
+        analyze(str(audio_path), audio, manifest)

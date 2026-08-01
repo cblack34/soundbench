@@ -223,11 +223,17 @@ def analyze(path: str, audio: AudioData, manifest: Manifest) -> Report:
     expected = expected_strokes(manifest)
     if not expected:
         raise ValueError("manifest expands to no expected strokes")
-    last_search_end = expected[-1].seconds + manifest.analysis.search_radius_ms / 1000.0
-    if last_search_end > audio.duration_seconds:
+    last_measurement_end = (
+        expected[-1].seconds
+        + manifest.analysis.search_radius_ms / 1000.0
+        + manifest.analysis.attack_window_ms / 1000.0
+        + manifest.analysis.frame_length / (2.0 * audio.sample_rate)
+    )
+    if last_measurement_end > audio.duration_seconds:
         raise ValueError(
-            f"manifest requires audio through {last_search_end:.3f}s, but WAV "
-            f"duration is {audio.duration_seconds:.3f}s"
+            "manifest requires audio through "
+            f"{last_measurement_end:.3f}s for the complete final measurement, "
+            f"but WAV duration is {audio.duration_seconds:.3f}s"
         )
     nyquist = audio.sample_rate / 2.0
     if manifest.analysis.high_band_hz[1] > nyquist:
