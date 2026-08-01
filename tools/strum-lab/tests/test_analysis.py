@@ -96,3 +96,20 @@ def test_manifest_requires_complete_final_attack_window(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="complete final measurement"):
         analyze(str(audio_path), audio, manifest)
+
+
+def test_every_frequency_band_is_checked_against_nyquist(tmp_path: Path) -> None:
+    audio_path = tmp_path / "strums.wav"
+    manifest_path = tmp_path / "manifest.yaml"
+    samples, _ = synthetic_strums()
+    write_pcm24(audio_path, samples)
+    configured = manifest_text()
+    configured = configured.replace("[80.0, 300.0]", "[8100.0, 8200.0]")
+    configured = configured.replace("[300.0, 1200.0]", "[8200.0, 8300.0]")
+    configured = configured.replace("[1200.0, 6000.0]", "[8300.0, 8400.0]")
+    manifest_path.write_text(configured, encoding="utf-8")
+    manifest = load_manifest(manifest_path)
+    audio = read_pcm_wav(audio_path, manifest.audio.channel)
+
+    with pytest.raises(ValueError, match=r"low band ends at 8200\.0 Hz"):
+        analyze(str(audio_path), audio, manifest)

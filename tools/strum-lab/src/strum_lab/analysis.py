@@ -17,15 +17,16 @@ from strum_lab.models import (
 )
 
 _EPSILON = 1e-12
+_SPECTRAL_CHUNK_FRAMES = 512
 
 
 @dataclass(frozen=True)
 class SpectralFrames:
     times: NDArray[np.float64]
-    frequencies: NDArray[np.float64]
-    magnitude: NDArray[np.float64]
-    power: NDArray[np.float64]
     onset_envelope: NDArray[np.float64]
+    low_power: NDArray[np.float64]
+    mid_power: NDArray[np.float64]
+    high_power: NDArray[np.float64]
 
 
 def _dbfs(value: float) -> float:
@@ -41,21 +42,48 @@ def _spectral_frames(audio: AudioData, manifest: Manifest) -> SpectralFrames:
     views = np.lib.stride_tricks.sliding_window_view(audio.samples, frame_length)
     frames = views[::hop_length]
     window = np.hanning(frame_length)
-    magnitude = np.abs(np.fft.rfft(frames * window, axis=1))
-    log_magnitude = np.log1p(magnitude)
-    positive_flux = np.maximum(np.diff(log_magnitude, axis=0), 0.0)
-    onset = np.zeros(magnitude.shape[0], dtype=np.float64)
-    onset[1:] = positive_flux.sum(axis=1)
-    times = (
-        np.arange(magnitude.shape[0], dtype=np.float64) * hop_length + frame_length / 2
-    ) / audio.sample_rate
     frequencies = np.fft.rfftfreq(frame_length, 1.0 / audio.sample_rate)
+    masks = (
+        _band_mask(frequencies, manifest.analysis.low_band_hz),
+        _band_mask(frequencies, manifest.analysis.mid_band_hz),
+        _band_mask(frequencies, manifest.analysis.high_band_hz),
+    )
+    for name, mask in zip(("low", "mid", "high"), masks, strict=True):
+        if not np.any(mask):
+            raise ValueError(
+                f"{name} frequency band contains no FFT bins; increase frame_length"
+            )
+
+    frame_count = frames.shape[0]
+    onset = np.zeros(frame_count, dtype=np.float64)
+    band_power = [np.zeros(frame_count, dtype=np.float64) for _ in masks]
+    previous_log_magnitude: NDArray[np.float64] | None = None
+    for start in range(0, frame_count, _SPECTRAL_CHUNK_FRAMES):
+        end = min(start + _SPECTRAL_CHUNK_FRAMES, frame_count)
+        magnitude = np.abs(np.fft.rfft(frames[start:end] * window, axis=1))
+        log_magnitude = np.log1p(magnitude)
+        if previous_log_magnitude is not None:
+            onset[start] = float(
+                np.maximum(log_magnitude[0] - previous_log_magnitude, 0.0).sum()
+            )
+        if end - start > 1:
+            onset[start + 1 : end] = np.maximum(
+                np.diff(log_magnitude, axis=0), 0.0
+            ).sum(axis=1)
+        previous_log_magnitude = log_magnitude[-1]
+        power = np.square(magnitude)
+        for target, mask in zip(band_power, masks, strict=True):
+            target[start:end] = power[:, mask].sum(axis=1)
+
+    times = (
+        np.arange(frame_count, dtype=np.float64) * hop_length + frame_length / 2
+    ) / audio.sample_rate
     return SpectralFrames(
         times=times,
-        frequencies=frequencies,
-        magnitude=magnitude,
-        power=np.square(magnitude),
         onset_envelope=onset,
+        low_power=band_power[0],
+        mid_power=band_power[1],
+        high_power=band_power[2],
     )
 
 
@@ -79,17 +107,17 @@ def _band_mask(
 
 def _band_onset_time(
     frames: SpectralFrames,
-    mask: NDArray[np.bool_],
+    band_power: NDArray[np.float64],
     detected: float,
     attack_seconds: float,
 ) -> float | None:
     region = (frames.times >= detected - 0.03) & (
         frames.times <= detected + attack_seconds
     )
-    if not np.any(region) or not np.any(mask):
+    if not np.any(region):
         return None
     times = frames.times[region]
-    energy = frames.power[region][:, mask].sum(axis=1)
+    energy = band_power[region]
     if energy.size == 0 or float(np.max(energy)) <= _EPSILON:
         return None
     baseline_count = max(1, min(3, energy.size // 4))
@@ -136,17 +164,13 @@ def _measure_stroke(
     spectral_region = (frames.times >= detected) & (
         frames.times <= detected + attack_seconds
     )
-    low_mask = _band_mask(frames.frequencies, manifest.analysis.low_band_hz)
-    mid_mask = _band_mask(frames.frequencies, manifest.analysis.mid_band_hz)
-    high_mask = _band_mask(frames.frequencies, manifest.analysis.high_band_hz)
-    selected_power = frames.power[spectral_region]
-    low = float(selected_power[:, low_mask].sum())
-    mid = float(selected_power[:, mid_mask].sum())
-    high = float(selected_power[:, high_mask].sum())
+    low = float(frames.low_power[spectral_region].sum())
+    mid = float(frames.mid_power[spectral_region].sum())
+    high = float(frames.high_power[spectral_region].sum())
     total = max(low + mid + high, _EPSILON)
 
-    low_onset = _band_onset_time(frames, low_mask, detected, attack_seconds)
-    high_onset = _band_onset_time(frames, high_mask, detected, attack_seconds)
+    low_onset = _band_onset_time(frames, frames.low_power, detected, attack_seconds)
+    high_onset = _band_onset_time(frames, frames.high_power, detected, attack_seconds)
     lag = None
     if low_onset is not None and high_onset is not None:
         lag = (high_onset - low_onset) * 1000.0
@@ -236,11 +260,17 @@ def analyze(path: str, audio: AudioData, manifest: Manifest) -> Report:
             f"but WAV duration is {audio.duration_seconds:.3f}s"
         )
     nyquist = audio.sample_rate / 2.0
-    if manifest.analysis.high_band_hz[1] > nyquist:
-        raise ValueError(
-            f"high band ends at {manifest.analysis.high_band_hz[1]:.1f} Hz, "
-            f"above the {nyquist:.1f} Hz Nyquist frequency"
-        )
+    configured_bands = (
+        ("low", manifest.analysis.low_band_hz),
+        ("mid", manifest.analysis.mid_band_hz),
+        ("high", manifest.analysis.high_band_hz),
+    )
+    for name, band in configured_bands:
+        if band[1] > nyquist:
+            raise ValueError(
+                f"{name} band ends at {band[1]:.1f} Hz, "
+                f"above the {nyquist:.1f} Hz Nyquist frequency"
+            )
 
     frames = _spectral_frames(audio, manifest)
     strokes = [_measure_stroke(stroke, audio, manifest, frames) for stroke in expected]
