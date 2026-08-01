@@ -30,9 +30,21 @@ def test_rejects_unknown_manifest_fields(tmp_path: Path) -> None:
 
 def test_rejects_beats_outside_meter(tmp_path: Path) -> None:
     path = tmp_path / "manifest.yaml"
-    path.write_text(manifest_text().replace("[1, 2, 3, 4]", "[1, 5]"), encoding="utf-8")
+    manifest = manifest_text().replace("[1, 2, 3, 4]", "[1, 2, 3, 5]")
+    manifest = manifest.replace("    4: relaxed", "    5: relaxed")
+    path.write_text(manifest, encoding="utf-8")
 
     with pytest.raises(ValidationError, match="fit within beats_per_bar"):
+        load_manifest(path)
+
+
+def test_rejects_labels_for_unconfigured_beats(tmp_path: Path) -> None:
+    path = tmp_path / "manifest.yaml"
+    path.write_text(
+        manifest_text().replace("    4: relaxed", "    5: relaxed"), encoding="utf-8"
+    )
+
+    with pytest.raises(ValidationError, match=r"unknown: 5\.0"):
         load_manifest(path)
 
 

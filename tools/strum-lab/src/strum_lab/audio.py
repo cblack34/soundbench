@@ -1,6 +1,7 @@
 """Strict, non-mutating PCM WAV input."""
 
 import hashlib
+import io
 import wave
 from dataclasses import dataclass
 from pathlib import Path
@@ -52,8 +53,9 @@ def read_pcm_wav(
 ) -> AudioData:
     """Read 8/16/24/32-bit PCM WAV and explicitly select a channel."""
 
+    payload = path.read_bytes()
     try:
-        with wave.open(str(path), "rb") as source:
+        with wave.open(io.BytesIO(payload), "rb") as source:
             if source.getcomptype() != "NONE":
                 raise ValueError("only uncompressed PCM WAV is supported")
             channels = source.getnchannels()
@@ -88,7 +90,7 @@ def read_pcm_wav(
 
     maximum_code = (2 ** (sample_width * 8 - 1) - 1) / 2 ** (sample_width * 8 - 1)
     clipped = int(np.count_nonzero(np.abs(selected) >= maximum_code))
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    digest = hashlib.sha256(payload).hexdigest()
     return AudioData(
         samples=np.ascontiguousarray(selected, dtype=np.float64),
         sample_rate=sample_rate,

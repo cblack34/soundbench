@@ -37,6 +37,17 @@ class GridConfig(StrictModel):
             raise ValueError("beat positions must be unique and increasing")
         return beats
 
+    @model_validator(mode="after")
+    def labels_reference_configured_beats(self) -> GridConfig:
+        unknown_beats = set(self.beat_labels) - set(self.beats)
+        if unknown_beats:
+            formatted = ", ".join(str(beat) for beat in sorted(unknown_beats))
+            raise ValueError(
+                "beat_labels keys must reference configured beats; "
+                f"unknown: {formatted}"
+            )
+        return self
+
 
 class AnalysisConfig(StrictModel):
     search_radius_ms: float = Field(default=300.0, gt=0.0, le=499.0)

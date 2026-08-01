@@ -1,3 +1,4 @@
+import hashlib
 from pathlib import Path
 
 import numpy as np
@@ -18,7 +19,7 @@ def test_reads_stereo_pcm24_with_explicit_mean(tmp_path: Path) -> None:
     assert audio.source_channels == 2
     assert audio.bits_per_sample == 24
     assert audio.samples == pytest.approx([0.375, -0.375, 0.0], abs=2e-7)
-    assert len(audio.sha256) == 64
+    assert audio.sha256 == hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def test_rejects_right_channel_for_mono(tmp_path: Path) -> None:
