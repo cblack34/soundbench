@@ -1,0 +1,55 @@
+name: Strum Lab
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/strum-lab.yml"
+      - "tools/strum-lab/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/strum-lab.yml"
+      - "tools/strum-lab/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/strum-lab
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.29"
+          python-version: "3.14"
+          working-directory: tools/strum-lab
+          enable-cache: true
+
+      - name: Sync locked environment
+        run: uv sync --locked
+
+      - name: Check lockfile
+        run: uv lock --check
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Check formatting
+        run: uv run ruff format --check .
+
+      - name: Type check
+        run: uv run ty check
+
+      - name: Test
+        run: uv run pytest
+
+      - name: Smoke-test CLI
+        run: uv run strum-lab --help

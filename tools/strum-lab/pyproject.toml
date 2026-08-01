@@ -1,0 +1,45 @@
+[project]
+name = "soundbench-strum-lab"
+version = "0.1.0"
+description = "Deterministic reference analysis for annotated guitar strums"
+readme = "README.md"
+requires-python = ">=3.14,<3.15"
+license = "Apache-2.0"
+authors = [{ name = "Clayton Black" }]
+dependencies = [
+    "numpy>=2.3.2",
+    "pydantic>=2.11.7",
+    "pyyaml>=6.0.2",
+]
+
+[project.scripts]
+strum-lab = "strum_lab.cli:main"
+
+[dependency-groups]
+dev = [
+    "hatchling>=1.27,<2",
+    "pytest>=8.4.1",
+    "ruff>=0.12.7",
+    "ty>=0.0.1a16",
+]
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/strum_lab"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ty.environment]
+python-version = "3.14"

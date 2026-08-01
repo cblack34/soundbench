@@ -1,0 +1,27 @@
+schema_version: 1
+recording_id: e-major-quarter-down-60
+notes: E-major quarter-note downstrokes; bar 1 is a silent count-in.
+audio:
+  channel: mean
+performance:
+  tempo_bpm: 60.0
+  beats_per_bar: 4
+  beat_unit: 4
+grid:
+  first_bar: 2
+  bar_count: 10
+  beats: [1, 2, 3, 4]
+  direction: down
+  beat_labels:
+    1: beat-1
+    2: beat-2
+    3: beat-3
+    4: beat-4
+analysis:
+  search_radius_ms: 300.0
+  frame_length: 1024
+  hop_length: 128
+  attack_window_ms: 100.0
+  low_band_hz: [80.0, 300.0]
+  mid_band_hz: [300.0, 1200.0]
+  high_band_hz: [1200.0, 6000.0]
