@@ -36,9 +36,10 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     """Run the CLI and return a process status."""
 
-    args = _parser().parse_args(argv)
+    parser = _parser()
+    args = parser.parse_args(argv)
     if args.command != "analyze":
-        _parser().error(f"unsupported command: {args.command}")
+        parser.error(f"unsupported command: {args.command}")
 
     try:
         manifest = load_manifest(args.manifest)

@@ -56,6 +56,21 @@ def test_output_is_deterministic_and_refuses_overwrite(tmp_path: Path) -> None:
         write_outputs(first, report, audio)
 
 
+def test_strokes_csv_has_an_explicit_versioned_schema(tmp_path: Path) -> None:
+    report, audio, _ = _analyze_synthetic(tmp_path)
+    output = tmp_path / "output"
+
+    write_outputs(output, report, audio)
+
+    header = (output / "strokes.csv").read_text(encoding="utf-8").splitlines()[0]
+    assert header == (
+        "index,bar,beat,beat_label,direction,expected_seconds,detected_seconds,"
+        "timing_error_ms,onset_confidence,peak_dbfs,rms_dbfs,attack_energy,"
+        "low_energy_ratio,mid_energy_ratio,high_energy_ratio,"
+        "high_minus_low_onset_ms"
+    )
+
+
 def test_output_rejects_existing_empty_directory(tmp_path: Path) -> None:
     report, audio, _ = _analyze_synthetic(tmp_path)
     output = tmp_path / "existing"

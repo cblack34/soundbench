@@ -12,6 +12,25 @@ import numpy as np
 from strum_lab.audio import AudioData
 from strum_lab.models import Report
 
+STROKE_CSV_FIELDS_V1 = (
+    "index",
+    "bar",
+    "beat",
+    "beat_label",
+    "direction",
+    "expected_seconds",
+    "detected_seconds",
+    "timing_error_ms",
+    "onset_confidence",
+    "peak_dbfs",
+    "rms_dbfs",
+    "attack_energy",
+    "low_energy_ratio",
+    "mid_energy_ratio",
+    "high_energy_ratio",
+    "high_minus_low_onset_ms",
+)
+
 
 def _sha256(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
@@ -25,13 +44,16 @@ def _require_strokes(report: Report) -> None:
 def _csv_bytes(report: Report) -> bytes:
     _require_strokes(report)
     stream = io.StringIO(newline="")
-    fields = list(report.strokes[0].model_dump().keys())
-    writer = csv.DictWriter(stream, fieldnames=fields, lineterminator="\n")
+    writer = csv.DictWriter(
+        stream, fieldnames=STROKE_CSV_FIELDS_V1, lineterminator="\n"
+    )
     writer.writeheader()
     for stroke in report.strokes:
         row = stroke.model_dump()
+        if set(row) != set(STROKE_CSV_FIELDS_V1):
+            raise ValueError("stroke fields do not match the version 1 CSV schema")
         writer.writerow(
-            {key: "" if value is None else value for key, value in row.items()}
+            {key: "" if row[key] is None else row[key] for key in STROKE_CSV_FIELDS_V1}
         )
     return stream.getvalue().encode("utf-8")
 
