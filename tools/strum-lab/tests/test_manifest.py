@@ -56,6 +56,14 @@ def test_wraps_yaml_syntax_errors(tmp_path: Path) -> None:
         load_manifest(path)
 
 
+def test_wraps_non_utf8_manifest_errors(tmp_path: Path) -> None:
+    path = tmp_path / "manifest.yaml"
+    path.write_bytes(b"schema_version: \xff\n")
+
+    with pytest.raises(ValueError, match="manifest must be valid UTF-8"):
+        load_manifest(path)
+
+
 def test_rejects_unsupported_beat_unit(tmp_path: Path) -> None:
     path = tmp_path / "manifest.yaml"
     path.write_text(

@@ -23,7 +23,10 @@ proxies whose limitations must remain visible in reports.
 
 ## Quick start
 
+From the repository root:
+
 ```bash
+cd tools/strum-lab
 uv sync --locked
 uv run strum-lab --help
 uv run strum-lab analyze ../../data/recording.wav \

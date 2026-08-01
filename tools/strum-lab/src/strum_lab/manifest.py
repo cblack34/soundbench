@@ -24,6 +24,8 @@ def load_manifest(path: Path) -> Manifest:
 
     try:
         parsed = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except UnicodeDecodeError as error:
+        raise ValueError("manifest must be valid UTF-8") from error
     except yaml.YAMLError as error:
         raise ValueError(f"invalid YAML manifest: {error}") from error
     if not isinstance(parsed, dict):
