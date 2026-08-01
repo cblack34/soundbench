@@ -22,7 +22,10 @@ class ExpectedStroke:
 def load_manifest(path: Path) -> Manifest:
     """Load and strictly validate a UTF-8 YAML manifest."""
 
-    parsed = yaml.safe_load(path.read_text(encoding="utf-8"))
+    try:
+        parsed = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as error:
+        raise ValueError(f"invalid YAML manifest: {error}") from error
     if not isinstance(parsed, dict):
         raise ValueError("manifest must contain a YAML mapping")
     return Manifest.model_validate(parsed)

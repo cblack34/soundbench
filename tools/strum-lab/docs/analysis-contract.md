@@ -16,6 +16,8 @@ Required fields describe:
 
 Bar and beat numbers are one-based. Time zero is the first audio sample. An
 expected beat at bar 2, beat 1 in 4/4 at 60 BPM therefore occurs at 4.0 seconds.
+Version 1 supports quarter-note beat units only (`beat_unit: 4`); other meters
+must wait for an explicit tempo-unit contract rather than being reinterpreted.
 
 ## Report v1
 

@@ -18,7 +18,7 @@ class AudioConfig(StrictModel):
 class PerformanceConfig(StrictModel):
     tempo_bpm: float = Field(gt=0.0, le=400.0)
     beats_per_bar: int = Field(ge=1, le=16)
-    beat_unit: Literal[1, 2, 4, 8, 16, 32]
+    beat_unit: Literal[4]
 
 
 class GridConfig(StrictModel):

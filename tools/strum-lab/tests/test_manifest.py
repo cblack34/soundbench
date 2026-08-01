@@ -34,3 +34,21 @@ def test_rejects_beats_outside_meter(tmp_path: Path) -> None:
 
     with pytest.raises(ValidationError, match="fit within beats_per_bar"):
         load_manifest(path)
+
+
+def test_wraps_yaml_syntax_errors(tmp_path: Path) -> None:
+    path = tmp_path / "manifest.yaml"
+    path.write_text("schema_version: [1\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="invalid YAML manifest"):
+        load_manifest(path)
+
+
+def test_rejects_unsupported_beat_unit(tmp_path: Path) -> None:
+    path = tmp_path / "manifest.yaml"
+    path.write_text(
+        manifest_text().replace("beat_unit: 4", "beat_unit: 8"), encoding="utf-8"
+    )
+
+    with pytest.raises(ValidationError, match="beat_unit"):
+        load_manifest(path)
