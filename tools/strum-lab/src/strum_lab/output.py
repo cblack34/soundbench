@@ -141,6 +141,7 @@ def write_outputs(output: Path, report: Report, audio: AudioData) -> dict[str, s
         f"{digest}  {name}\n" for name, digest in sorted(hashes.items())
     ).encode()
     payloads["checksums.sha256"] = checksum_payload
+    hashes["checksums.sha256"] = _sha256(checksum_payload)
     for name, payload in payloads.items():
         (output / name).write_bytes(payload)
-    return {name: _sha256(payload) for name, payload in payloads.items()}
+    return hashes
