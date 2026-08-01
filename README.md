@@ -24,9 +24,15 @@ decision.
 
 ## Tools
 
-No tool has been scaffolded yet. The first planned tool will analyze guitar
-strum references and renderer calibration evidence. Its contract, dependencies,
-and license will be selected as a separate reviewed change.
+- [`Strum Lab`](tools/strum-lab/README.md) analyzes annotated acoustic-guitar
+  PCM WAV references and produces deterministic timing, dynamics, and spectral
+  evidence.
+
+Run a tool through its independent project:
+
+```bash
+uv run --project tools/strum-lab strum-lab --help
+```
 
 ## Contributing
 
