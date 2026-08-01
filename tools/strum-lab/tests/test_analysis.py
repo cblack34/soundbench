@@ -52,8 +52,25 @@ def test_output_is_deterministic_and_refuses_overwrite(tmp_path: Path) -> None:
     assert first_hashes == second_hashes
     for name in first_hashes:
         assert (first / name).read_bytes() == (second / name).read_bytes()
-    with pytest.raises(FileExistsError, match="refusing to overwrite"):
+    with pytest.raises(FileExistsError, match="output directory already exists"):
         write_outputs(first, report, audio)
+
+
+def test_output_rejects_existing_empty_directory(tmp_path: Path) -> None:
+    report, audio, _ = _analyze_synthetic(tmp_path)
+    output = tmp_path / "existing"
+    output.mkdir()
+
+    with pytest.raises(FileExistsError, match="output directory already exists"):
+        write_outputs(output, report, audio)
+
+
+def test_output_rejects_empty_report(tmp_path: Path) -> None:
+    report, audio, _ = _analyze_synthetic(tmp_path)
+    empty_report = report.model_copy(update={"strokes": []})
+
+    with pytest.raises(ValueError, match="report must contain at least one stroke"):
+        write_outputs(tmp_path / "output", empty_report, audio)
 
 
 def test_manifest_cannot_extend_past_audio(tmp_path: Path) -> None:

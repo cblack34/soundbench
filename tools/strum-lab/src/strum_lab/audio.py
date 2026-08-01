@@ -71,7 +71,10 @@ def read_pcm_wav(
     if frame_count <= 0 or sample_rate <= 0:
         raise ValueError("WAV must contain audio frames at a positive sample rate")
 
-    decoded = _decode_pcm(raw, sample_width).reshape(frame_count, channels)
+    try:
+        decoded = _decode_pcm(raw, sample_width).reshape(frame_count, channels)
+    except ValueError as error:
+        raise ValueError(f"invalid or unsupported WAV: {error}") from error
     if channels == 1:
         if channel == "right":
             raise ValueError("right channel requested for mono input")

@@ -35,3 +35,12 @@ def test_rejects_non_wav(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="invalid or unsupported WAV"):
         read_pcm_wav(path, "mean")
+
+
+def test_rejects_truncated_pcm_with_consistent_error(tmp_path: Path) -> None:
+    path = tmp_path / "truncated.wav"
+    write_pcm24(path, np.zeros((160, 2), dtype=np.float64))
+    path.write_bytes(path.read_bytes()[:-1])
+
+    with pytest.raises(ValueError, match="invalid or unsupported WAV"):
+        read_pcm_wav(path, "mean")

@@ -12,14 +12,18 @@ import numpy as np
 from strum_lab.audio import AudioData
 from strum_lab.models import Report
 
-_OUTPUT_NAMES = ("report.json", "strokes.csv", "diagnostic.svg", "checksums.sha256")
-
 
 def _sha256(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _require_strokes(report: Report) -> None:
+    if not report.strokes:
+        raise ValueError("report must contain at least one stroke")
+
+
 def _csv_bytes(report: Report) -> bytes:
+    _require_strokes(report)
     stream = io.StringIO(newline="")
     fields = list(report.strokes[0].model_dump().keys())
     writer = csv.DictWriter(stream, fieldnames=fields, lineterminator="\n")
@@ -101,13 +105,12 @@ def _svg_bytes(report: Report, audio: AudioData) -> bytes:
 
 
 def write_outputs(output: Path, report: Report, audio: AudioData) -> dict[str, str]:
-    """Write a complete evidence set without overwriting existing targets."""
+    """Write a complete evidence set into a new output directory."""
 
-    existing = [name for name in _OUTPUT_NAMES if (output / name).exists()]
-    if existing:
-        joined = ", ".join(existing)
-        raise FileExistsError(f"refusing to overwrite existing output(s): {joined}")
-    output.mkdir(parents=True, exist_ok=True)
+    _require_strokes(report)
+    if output.exists():
+        raise FileExistsError(f"output directory already exists: {output}")
+    output.mkdir(parents=True, exist_ok=False)
 
     csv_payload = _csv_bytes(report)
     svg_payload = _svg_bytes(report, audio)
